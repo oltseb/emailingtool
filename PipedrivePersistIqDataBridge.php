@@ -67,16 +67,17 @@ class EmailSplitter
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        print_r($data);
-        $firstLetter = 'A';
-        foreach ($data as  $cellValue)
-        {
-            $sheet->setCellValue($firstLetter . $rowToWrite, $cellValue);
-            $firstLetter++;
+        foreach ($data as $rowLineNumber => $rowData) {
+            $firstLetter = 'A';
+            $rowLineNumber += 1;
+
+            for ($i = 0; $i < 4; $i++) {
+                $sheet->setCellValue($firstLetter . $rowLineNumber, $rowData[$i]);
+                $firstLetter++;
+            }
         }
         $writer = new Writer($spreadsheet);
         // Name of the output file
-        echo "\nWriting row #" . $rowToWrite;
         $writer->save('email-splitting' . '-' . $workSheetIndex . '.xlsx');
     }
 }
@@ -91,7 +92,7 @@ $reader = new Reader();
 // ***
 //
 // Entry data file
-$spreadSheet = $reader->load('email-splitting.xlsx');
+$spreadSheet = $reader->load('email-splitting-test.xlsx');
 //
 // ***
 // *** ***
@@ -102,7 +103,7 @@ ini_set('max_execution_time', 3000);
 ini_set('memory_limit','3000M');
 
 foreach ($spreadSheet->getWorksheetIterator() as $workSheetIndex => $worksheet) {
-//    $newSheetData = array();
+    $newSheetData = array();
     $rowId = 1;
     foreach ($worksheet->getRowIterator() as $row) {
         $rowData = array();
@@ -116,10 +117,9 @@ foreach ($spreadSheet->getWorksheetIterator() as $workSheetIndex => $worksheet) 
             continue;
         }
         foreach ($splitEmails as $newDataRow) {
-            $splitter->writeIntoFile($newDataRow, $workSheetIndex+41, $rowId);
-            $rowId++;
+            $newSheetData[] = $newDataRow;
         }
-//        $splitter->writeIntoFile($newSheetData, $workSheetIndex+41, $rowId);
-//        $rowId++;
     }
+    $splitter->writeIntoFile($newSheetData, $workSheetIndex+41);
+    $rowId++;
 }
