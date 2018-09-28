@@ -68,26 +68,26 @@ class EmailSplitter
 
     /**
      * @param $data
-     * @param $workSheetIndex
+     * @param $workSheetPostfix
+     * @param $rowId
      * @throws \PhpOffice\PhpSpreadsheet\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
      */
-    function writeIntoFile($data, $workSheetPostfix)
+    function writeIntoFile($data, $workSheetPostfix, $rowId)
     {
         try {
             $spreadSheet = $this->reader->load('email-splitting-' . $workSheetPostfix . '.xlsx');
         } catch (Exception $exception) {
+            echo "\n" . $exception->getMessage();
             $spreadSheet = new Spreadsheet();
         }
         $sheet = $spreadSheet->getActiveSheet();
-        foreach ($data as $rowLineNumber => $rowData) {
-            $firstLetter = 'A';
-            $rowLineNumber += 1;
-            for ($i = 0; $i < 4; $i++) {
-                $sheet->setCellValue($firstLetter . $rowLineNumber, $rowData[$i]);
-                $firstLetter++;
-            }
+        $firstLetter = 'A';
+        for ($i = 0; $i < 4; $i++) {
+            $sheet->setCellValue($firstLetter . $rowId, $data[$i]);
+            $firstLetter++;
         }
+        echo "\n" . "Writing row #" . $rowId;
         $writer = new Writer($spreadSheet);
         // Name of the output file
         $writer->save('email-splitting' . '-' . $workSheetPostfix . '.xlsx');
@@ -114,7 +114,7 @@ $spreadSheet = $reader->load('email-splitting-test.xlsx');
 ini_set('max_execution_time', 3000);
 ini_set('memory_limit', '3000M');
 
-foreach ($spreadSheet->getWorksheetIterator() as $workSheetIndex => $worksheet) {
+foreach ($spreadSheet->getWorksheetIterator() as $worksheet) {
     $newSheetData = array();
     $rowId = 1;
     foreach ($worksheet->getRowIterator() as $row) {
@@ -129,9 +129,8 @@ foreach ($spreadSheet->getWorksheetIterator() as $workSheetIndex => $worksheet) 
             continue;
         }
         foreach ($splitEmails as $newDataRow) {
-            $newSheetData[] = $newDataRow;
+            $splitter->writeIntoFile($newDataRow, "validated", $rowId);
+            $rowId++;
         }
     }
-    $splitter->writeIntoFile($newSheetData, $workSheetIndex . "validated");
-    $rowId++;
 }
