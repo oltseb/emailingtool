@@ -1,0 +1,13 @@
+{
+    "name": "oleksiitsebinoga/emailing-tool",
+    "type": "project",
+    "require": {
+        "phpoffice/phpspreadsheet": "^1.4"
+    },
+    "authors": [
+        {
+            "name": "Aleksej Tsebinoga",
+            "email": "aleksejt@scandiweb.com"
+        }
+    ]
+}
