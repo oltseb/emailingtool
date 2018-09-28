@@ -12,14 +12,23 @@ class EmailSplitter
 
     public $iterator = 0;
 
+    public $newSheetData = array();
+
+    protected $reader;
+
+    public function __construct()
+    {
+        $this->reader = new Reader();
+    }
+
     /**
      * @param $rowData
      * @return array|null
      */
-    function splitEmails($rowData) {
+    function splitEmails($rowData)
+    {
         $ind = 3;
-        if (!isset($rowData[$ind]))
-        {
+        if (!isset($rowData[$ind])) {
             return null;
         }
         $emails = preg_split("/[\s,;\n]+/", $rowData[$ind]);
@@ -63,22 +72,25 @@ class EmailSplitter
      * @throws \PhpOffice\PhpSpreadsheet\Exception
      * @throws \PhpOffice\PhpSpreadsheet\Writer\Exception
      */
-    function writeIntoFile($data, $workSheetIndex) {
-
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
+    function writeIntoFile($data, $workSheetPostfix)
+    {
+        try {
+            $spreadSheet = $this->reader->load('email-splitting-' . $workSheetPostfix . '.xlsx');
+        } catch (Exception $exception) {
+            $spreadSheet = new Spreadsheet();
+        }
+        $sheet = $spreadSheet->getActiveSheet();
         foreach ($data as $rowLineNumber => $rowData) {
             $firstLetter = 'A';
             $rowLineNumber += 1;
-
             for ($i = 0; $i < 4; $i++) {
                 $sheet->setCellValue($firstLetter . $rowLineNumber, $rowData[$i]);
                 $firstLetter++;
             }
         }
-        $writer = new Writer($spreadsheet);
+        $writer = new Writer($spreadSheet);
         // Name of the output file
-        $writer->save('email-splitting' . '-' . $workSheetIndex . '.xlsx');
+        $writer->save('email-splitting' . '-' . $workSheetPostfix . '.xlsx');
     }
 }
 
@@ -100,7 +112,7 @@ $spreadSheet = $reader->load('email-splitting-test.xlsx');
 //
 
 ini_set('max_execution_time', 3000);
-ini_set('memory_limit','3000M');
+ini_set('memory_limit', '3000M');
 
 foreach ($spreadSheet->getWorksheetIterator() as $workSheetIndex => $worksheet) {
     $newSheetData = array();
@@ -120,6 +132,6 @@ foreach ($spreadSheet->getWorksheetIterator() as $workSheetIndex => $worksheet) 
             $newSheetData[] = $newDataRow;
         }
     }
-    $splitter->writeIntoFile($newSheetData, $workSheetIndex+41);
+    $splitter->writeIntoFile($newSheetData, $workSheetIndex . "validated");
     $rowId++;
 }
