@@ -2,6 +2,7 @@
 
 require 'vendor/autoload.php';
 require_once "ValidateEmail.php";
+require_once "Helper.php";
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx as Reader;
@@ -10,11 +11,48 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx as Writer;
 class EmailSplitter
 {
 
+//    /** SHOULD EXIST IN ANOTHER CLASS */
+//     * @var
+//     *
+//     * Filename from where to read
+//     */
+//    protected $inputFileName;
+//
+//    /**
+//     * @var
+//     *
+//     * Filename to where to write
+//     */
+//    protected $outputFileName;
+//
+//    /**
+//     * @var
+//     *
+//     * number of column, which stores email address
+//     */
+//    protected $emailColumn;
+//
+//    const INPUT_FILE_ARGUMENT = 1;
+//
+//    const EMAIL_COL_ARGUMENT = 2;
+//
+//    const OUTPUT_FILE_ARGUMENT = 3;
+
     public $iterator = 0;
 
     public $newSheetData = array();
 
+    /**
+     * @var Reader
+     */
     protected $reader;
+
+    /**
+     * @var Helper
+     */
+    public $helper;
+
+    protected $emailColumnIndex = 1;
 
     public function __construct()
     {
@@ -27,7 +65,7 @@ class EmailSplitter
      */
     function splitEmails($rowData)
     {
-        $ind = 3;
+        $ind = $this->emailColumnIndex;
         if (!isset($rowData[$ind])) {
             return null;
         }
@@ -39,6 +77,8 @@ class EmailSplitter
             echo "\n" . " Validating " . $email . " ...";
 
             try {
+                $emailResult = array();
+                $emailResult[$email] = true;
                 $emailResult = $emailValidator->validate(array($email), "leksa.ukr@gmail.com");
             } catch (Exception $e) {
                 echo "\n" . $email . " failed to validate, was not saved";
@@ -46,12 +86,22 @@ class EmailSplitter
                 continue;
             }
 
-            if (!$emailResult[$email]) {
-                echo "\n" . $email . " does not exist";
+            try {
+                if (!isset($emailResult[$email])) {
+                    throw new Exception("Wrong ditch");
+                }
+                if (!$emailResult[$email]) {
+                    echo "\n" . $email . " does not exist";
+                    $this->iterator++;
+                    echo "\n" . $this->iterator . " was processed";
+                    continue;
+                }
+            } catch (Exception $e)
+            {
+                echo "\n" . $email . " broken pipe during procession. Still saving into the sheet";
                 $this->iterator++;
-                echo "\n" . $this->iterator . " was processed";
-                continue;
             }
+
             echo "\n" . $email . " was validated";
             foreach ($rowData as $index => $cellData) {
                 if ($index === $ind) {
@@ -75,22 +125,23 @@ class EmailSplitter
      */
     function writeIntoFile($data, $workSheetPostfix, $rowId)
     {
+        $outputFile = 'newsletter-part-10' . '-' . $workSheetPostfix . '.xlsx';
         try {
-            $spreadSheet = $this->reader->load('email-splitting-' . $workSheetPostfix . '.xlsx');
+            $spreadSheet = $this->reader->load($outputFile);
         } catch (Exception $exception) {
             echo "\n" . $exception->getMessage();
             $spreadSheet = new Spreadsheet();
         }
         $sheet = $spreadSheet->getActiveSheet();
         $firstLetter = 'A';
-        for ($i = 0; $i < 4; $i++) {
+        for ($i = 0; $i < 2; $i++) {
             $sheet->setCellValue($firstLetter . $rowId, $data[$i]);
             $firstLetter++;
         }
         echo "\n" . "Writing row #" . $rowId;
         $writer = new Writer($spreadSheet);
         // Name of the output file
-        $writer->save('email-splitting' . '-' . $workSheetPostfix . '.xlsx');
+        $writer->save($outputFile);
     }
 }
 
@@ -104,15 +155,15 @@ $reader = new Reader();
 // ***
 //
 // Entry data file
-$spreadSheet = $reader->load('email-splitting-test.xlsx');
+$spreadSheet = $reader->load('to-work-with/newsletter-part-10.xlsx');
 //
 // ***
 // *** ***
 // ***
 //
 
-ini_set('max_execution_time', 3000);
-ini_set('memory_limit', '3000M');
+ini_set('max_execution_time', 30000);
+ini_set('memory_limit', '30000M');
 
 foreach ($spreadSheet->getWorksheetIterator() as $worksheet) {
     $newSheetData = array();
